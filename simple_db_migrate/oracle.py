@@ -72,7 +72,7 @@ class Oracle(object):
             conn.close()
             raise MigrationException(("error executing migration: %s" % e), curr_statement)
 
-    def __change_db_version(self, version, migration_file_name, sql_up, sql_down, up=True, execution_log=None, label_version=None):
+    def _change_db_version(self, version, migration_file_name, sql_up, sql_down, up=True, execution_log=None, label_version=None):
         params = {}
         params['version'] = version
 
@@ -245,7 +245,7 @@ class Oracle(object):
 
     def change(self, sql, new_db_version, migration_file_name, sql_up, sql_down, up=True, execution_log=None, label_version=None):
         self.__execute(sql, execution_log)
-        self.__change_db_version(new_db_version, migration_file_name, sql_up, sql_down, up, execution_log, label_version)
+        self._change_db_version(new_db_version, migration_file_name, sql_up, sql_down, up, execution_log, label_version)
 
     def get_current_schema_version(self):
         conn = self.__connect()
