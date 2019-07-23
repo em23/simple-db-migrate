@@ -7,6 +7,7 @@ from .core.exceptions import MigrationException
 from .helpers import Utils
 from getpass import getpass
 from .cli import CLI
+from .sqlplus_commando import SqlplusCommando
 
 class Oracle(object):
     __re_objects = re.compile("(?ims)(?P<pre>.*?)(?P<main>create[ \n\t\r]*(or[ \n\t\r]+replace[ \n\t\r]*)?(trigger|function|procedure|package|package body).*?)\n[ \n\t\r]*/([ \n\t\r]+(?P<pos>.*)|$)")
@@ -72,7 +73,7 @@ class Oracle(object):
             conn.close()
             raise MigrationException(("error executing migration: %s" % e), curr_statement)
 
-    def _change_db_version(self, version, migration_file_name, sql_up, sql_down, up=True, execution_log=None, label_version=None):
+    def __change_db_version(self, version, migration_file_name, sql_up, sql_down, up=True, execution_log=None, label_version=None):
         params = {}
         params['version'] = version
 
@@ -244,8 +245,20 @@ class Oracle(object):
             self.__execute(sql)
 
     def change(self, sql, new_db_version, migration_file_name, sql_up, sql_down, up=True, execution_log=None, label_version=None):
-        self.__execute(sql, execution_log)
-        self._change_db_version(new_db_version, migration_file_name, sql_up, sql_down, up, execution_log, label_version)
+        try:
+            self.__execute(sql, execution_log)          # First trying to execute the sql using simple_db_migrate
+        except MigrationException as err:               # If simple_db_migrate fails because of Sql plus commands then try using SqlplusCommando
+            isInvalidStatement = "Invalid SQL Statement".lower() in err.msg.lower()
+            isSqlPlus = True
+            if isInvalidStatement and isSqlPlus:
+                sqlplus = SqlplusCommando(port=self.__port, hostname=self.__host, database=self.__db, username=self.__user, password=self.__passwd)
+                with open(r'temp.sql', 'w') as f:       # Creating temporary sql file so we can execute the whole script
+                    f.write(sql)
+                sqlplus.run_script(r'temp.sql')         # Execute script on oracle
+            else:
+                raise MigrationException(("error executing migration: %s" % err.msg), err.sql)
+
+        self.__change_db_version(new_db_version, migration_file_name, sql_up, sql_down, up, execution_log, label_version)
 
     def get_current_schema_version(self):
         conn = self.__connect()
