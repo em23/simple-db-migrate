@@ -1,5 +1,6 @@
 __author__ = 'em23'
 
+import json
 from simple_db_migrate.core.exceptions import MigrationException
 from simple_db_migrate.oracle import Oracle
 from sqlplus_commando import SqlplusCommando
@@ -10,23 +11,19 @@ def get_file_data(filename):
         full_sql = f.read()
     return full_sql
 
+def get_config_data():
+    with open('config.txt') as f:
+        data = f.read()
+    return json.loads(data)
 
 ########################
 ### Setting up data ####
 ########################
 
-config = {
-    "database_script_encoding": "utf8",
-    "database_encoding": "American_America.UTF8",
-    "database_host": "54.203.84.28",
-    "database_port": 1521,
-    "database_user": "VDRDS",
-    "database_password": "1qazxsw23",
-    "database_name": 'VDDATA',
-    "database_version_table": "db_version"
-}
+config = get_config_data()
+
 new_db_version      = "0.0.3"
-migration_file_name = "migrate2"
+migration_file_name = "migrate3"
 sql                 = get_file_data('samples\sql.sql')
 sql_up              = unicode(get_file_data('samples\sql_up.sql')   , "utf-8")
 sql_down            = unicode(get_file_data('samples\sql_down.sql') , "utf-8")
