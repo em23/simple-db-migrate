@@ -11,14 +11,17 @@ def get_file_data(filename):
         full_sql = f.read()
     return full_sql
 
+
 def get_config_data():
     with open('config.txt') as f:
         data = f.read()
     return json.loads(data)
 
+
 ########################
 ### Setting up data ####
 ########################
+
 
 config = get_config_data()
 
@@ -43,10 +46,14 @@ def run_example():
         with open(r'samples\temp.sql','w') as file:     # Creating temporary sql file so we can execute the whole script
             file.write(sql)
 
-        sqlplus.run_script(r'samples\temp.sql')         # Execute script on oracle
+        result = sqlplus.run_script(r'samples\temp.sql')         # Execute script on oracle
 
         # Finish by using simple_db_migrate's method to record the migration
         db._change_db_version(new_db_version, migration_file_name, sql_up, sql_down, up=True, execution_log=None, label_version=None)
+
+        # Saving oracle output to an html file
+        with open('test.html', 'w') as file:
+            file.write(result)
 
 
 if __name__ == '__main__':
