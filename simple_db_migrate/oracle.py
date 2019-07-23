@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import re
 
 from .core import Migration
 from .core.exceptions import MigrationException
@@ -12,6 +13,7 @@ from .sqlplus_commando import SqlplusCommando
 class Oracle(object):
     __re_objects = re.compile("(?ims)(?P<pre>.*?)(?P<main>create[ \n\t\r]*(or[ \n\t\r]+replace[ \n\t\r]*)?(trigger|function|procedure|package|package body).*?)\n[ \n\t\r]*/([ \n\t\r]+(?P<pos>.*)|$)")
     __re_anonymous = re.compile("(?ims)(?P<pre>.*?)(?P<main>(declare[ \n\t\r]+.*?)?begin.*?\n[ \n\t\r]*)/([ \n\t\r]+(?P<pos>.*)|$)")
+    __re_sqlplus = re.compile(r"(WHENEVER (OSERROR|SQLERROR)|VARIABLE|UNDEFINE|DEFINE|TIMING|STORE|SPOOL|START|STARTUP|SHUTDOWN|SHOW|SET|RUN|SAVE|RECOVER|REMARK|QUIT|EXIT|PRINT|PROMPT|HOST|INPUT|LIST|HELP|GET|EDIT|EXECUTE|DISCONNECT|DESCRIBE|COPY|COMPUTE|COLUMN|CLEAR|CONNECT|APPEND|ATTRIBUTE|ACCEPT|CHANGE|BREAK|ARCHIVE|@)", re.MULTILINE + re.IGNORECASE)
 
     def __init__(self, config=None, driver=None, get_pass=getpass, std_in=sys.stdin):
         self.__script_encoding = config.get("database_script_encoding", "utf8")
@@ -249,7 +251,8 @@ class Oracle(object):
             self.__execute(sql, execution_log)          # First trying to execute the sql using simple_db_migrate
         except MigrationException as err:               # If simple_db_migrate fails because of Sql plus commands then try using SqlplusCommando
             isInvalidStatement = "Invalid SQL Statement".lower() in err.msg.lower()
-            isSqlPlus = True
+            match_stmt = Oracle.__re_sqlplus.match(err.sql)
+            isSqlPlus = match_stmt is not None
             if isInvalidStatement and isSqlPlus:
                 sqlplus = SqlplusCommando(port=self.__port, hostname=self.__host, database=self.__db, username=self.__user, password=self.__passwd)
                 with open(r'temp.sql', 'w') as f:       # Creating temporary sql file so we can execute the whole script
